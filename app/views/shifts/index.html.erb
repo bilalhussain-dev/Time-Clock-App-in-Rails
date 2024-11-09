@@ -1,0 +1,40 @@
+<p style="color: green"><%= notice %></p>
+
+<div class="container mx-auto mt-8">
+  <h1 class="text-2xl font-bold mb-4">Shifts</h1>
+
+  <% if current_user.has_role?(:admin) %>
+    <%= link_to 'Create New Shift', new_shift_path, class: 'btn btn-primary mb-4' %>
+  <% end %>
+
+  <div class="grid grid-cols-1 gap-4">
+    <% @shifts.each do |shift| %>
+      <div class="border p-4 rounded">
+        <h2 class="text-xl font-semibold"><%= shift.title %></h2>
+        <p class="text-gray-600"><%= shift.description %></p>
+
+        <% if current_user.has_role?(:admin) %>
+          <%= form_for ShiftAssignment.new do |f| %>
+            <%= f.hidden_field :shift_id, value: shift.id %>
+            <%= f.select :user_id, User.with_role(:worker).pluck(:email, :id) %>
+            <%= f.submit 'Assign Worker', class: 'btn btn-sm btn-primary' %>
+          <% end %>
+        <% else %>
+          <div id="time_log_controls">
+            <% if current_time_log = current_user.time_logs.running.find_by(shift_assignment_id: shift.shift_assignments.find_by(user: current_user)&.id) %>
+              <%= button_to 'Check Out', time_log_path(current_time_log), method: :patch, class: 'btn btn-danger', data: { turbo: true } %>
+            <% else %>
+              <%= button_to 'Check In', time_logs_path(time_log: { shift_assignment_id: shift.shift_assignments.find_by(user: current_user)&.id }), class: 'btn btn-success', data: { turbo: true } %>
+            <% end %>
+          </div>
+
+          <div id="time_log_status">
+            Total hours worked: <span class="font-bold"><%= current_user.total_hours_for_shift(shift) %></span>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<%= link_to "New shift", new_shift_path %>
